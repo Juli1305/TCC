@@ -1,0 +1,556 @@
+{
+  "name": "RPA Consulta Judicial",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Arquitectura de la prueba\n\n1. Gmail recibe el correo de entrada.\n2. Se extrae el nombre desde el cuerpo del mensaje.\n3. Playwright abre Rama Judicial y ejecuta la consulta.\n4. Se toma el sexto resultado y se descarga el DOC.\n5. El DOC se guarda en Supabase Storage.\n6. Se envía correo con el DOC adjunto y la URL temporal.",
+        "height": 300,
+        "width": 420,
+        "color": 5
+      },
+      "id": "2af045af-8e3c-4959-9b7d-1e2a5b984a3f",
+      "name": "Nota 1 - Arquitectura Gmail + RPA + Supabase",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Decisión técnica\n\nLa consulta de Rama Judicial requiere navegador real y JavaScript.\n\nPor eso esta versión usa Playwright desde un nodo Code. Evita depender de coordenadas o HTML incompleto.\n\nRequisito Docker: instalar Chromium + Playwright y permitir módulos externos en n8n.",
+        "height": 300,
+        "width": 420,
+        "color": 4
+      },
+      "id": "b8af5a1b-3af5-407a-baf3-d79cf3f16fc1",
+      "name": "Nota 2 - Por qué Playwright",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Supabase\n\nEstrategia usada:\n\n- Bucket recomendado: privado.\n- Upload del DOC vía Storage API.\n- Generación de Signed URL temporal.\n- El correo conserva el archivo adjunto, que es lo obligatorio para la prueba.\n\n",
+        "height": 300,
+        "width": 420,
+        "color": 6
+      },
+      "id": "0754df4e-a591-411d-aa59-4b0783acb1da",
+      "name": "Nota 3 - Supabase Storage",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Configuración\n\nEditar el nodo **Preparar entrada, validar nombre y parámetros**:\n\n- recipientEmail\n- smtpFrom\n- supabaseUrl\n- supabaseBucket\n- supabaseServiceRoleKey\n- rutas locales\n\nConfigurar credenciales:\n\n- Gmail OAuth2\n- SMTP Gmail o SMTP corporativo\n\nActivar Gmail Trigger solo cuando ya esté probado manualmente.",
+        "height": 300,
+        "width": 420,
+        "color": 3
+      },
+      "id": "03ce0933-b2a7-40f2-893f-b0e23b321c91",
+      "name": "Nota 4 - Configuración requerida",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Entrega sugerida\n\n/rpa-consulta-judicial\n\n/flujo\n- workflow JSON\n\n/screenshots\n- success_*.png\n\n/logs\n- ejecuciones_rpa_consulta_judicial.jsonl\n\nREADME.md\n- requisitos\n- configuración\n- decisiones técnicas\n- limitaciones\n- cómo ejecutar demo",
+        "height": 300,
+        "width": 420,
+        "color": 7
+      },
+      "id": "104a327d-4a30-473b-80e8-a48747d0f441",
+      "name": "Nota 5 - Entregables",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ],
+          "q": "subject:\"Prueba RPA Judicial\" is:unread",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "fb05a37b-5fde-41d6-bdee-3a6120e1cd7c",
+      "name": "Gmail Trigger - Producción (configurar y activar)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [
+        48,
+        608
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9waStz5ryqi0QVm7",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "id": "5fbf04e2-38cc-489b-9f03-b92328325757",
+      "name": "Gmail - Obtener correo completo",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        608
+      ],
+      "webhookId": "4c309c96-f564-4b80-aeea-a7d655cb75d3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9waStz5ryqi0QVm7",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "fdeec606-d37c-4dd9-899e-f39fa8747762",
+      "name": "Ejecutar prueba manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        48,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      id: \"gmail_test_manual\",\n      threadId: \"thread_test_manual\",\n      subject: \"Prueba técnica RPA - consulta judicial\",\n      from: \"correo.prueba@gmail.com\",\n      textPlain: \"Oscar Martinez Davila\"\n    }\n  }\n];"
+      },
+      "id": "1c46ca34-7d1f-43f3-9115-ad79e55ffa7f",
+      "name": "Simular correo Gmail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\n\nconst CONFIG = {\n  recipientEmail: \"juliancardozo2109@gmail.com\",\n\n  smtpFrom: \"juliancardozo2109@gmail.com\",\n\n  baseUrl: \"https://consultaprocesos.ramajudicial.gov.co/Procesos/NombreRazonSocial\",\n\n\noutputDir: \"/home/node/.n8n-files/rpa/downloads\",\nlogDir: \"/home/node/.n8n-files/rpa/logs\",\nscreenshotDir: \"/home/node/.n8n-files/rpa/screenshots\",\n\n  headless: true,\n  timeoutMs: 45000,\n  chromiumPath: \"/usr/bin/chromium-browser\",\n\n\n  supabaseUrl: \"https://wbetpemoxhllqbgqewsx.supabase.co\",\n  supabaseBucket: \"rpa-consulta-judicial\",\n  supabaseServiceRoleKey: \"sb_secret_hSdvfQL8KLpxxlZ-SbXXrQ_UUS1jdQ7\",\n\n  signedUrlExpiresInSeconds: 604800\n};\n\nfunction decodeBase64Url(value) {\n  if (!value || typeof value !== \"string\") return \"\";\n\n  try {\n    const normalized = value.replace(/-/g, \"+\").replace(/_/g, \"/\");\n    return Buffer.from(normalized, \"base64\").toString(\"utf8\");\n  } catch (error) {\n    return value;\n  }\n}\n\nfunction extractTextFromGmailPayload(payload) {\n  if (!payload) return \"\";\n\n\n  if (payload.body?.data) {\n    return decodeBase64Url(payload.body.data);\n  }\n\n\n  if (Array.isArray(payload.parts)) {\n    const textParts = [];\n\n    function walkParts(parts) {\n      for (const part of parts) {\n        if (part.mimeType === \"text/plain\" && part.body?.data) {\n          textParts.push(decodeBase64Url(part.body.data));\n        }\n\n        if (part.mimeType === \"text/html\" && part.body?.data && textParts.length === 0) {\n          textParts.push(decodeBase64Url(part.body.data));\n        }\n\n        if (Array.isArray(part.parts)) {\n          walkParts(part.parts);\n        }\n      }\n    }\n\n    walkParts(payload.parts);\n\n    return textParts.join(\" \");\n  }\n\n  return \"\";\n}\n\nfunction cleanHtmlAndSpaces(value) {\n  return String(value || \"\")\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, \" \")\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, \" \")\n    .replace(/<[^>]*>/g, \" \")\n    .replace(/&nbsp;/gi, \" \")\n    .replace(/&amp;/gi, \"&\")\n    .replace(/&lt;/gi, \"<\")\n    .replace(/&gt;/gi, \">\")\n    .replace(/\\r?\\n/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction normalizeName(value) {\n  return String(value || \"\")\n    .normalize(\"NFC\")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction makeSafeFileName(value) {\n  return String(value || \"\")\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/ñ/gi, \"n\")\n    .replace(/[^a-zA-Z0-9]+/g, \"_\")\n    .replace(/^_+|_+$/g, \"\")\n    .toLowerCase();\n}\n\n\nif (\n  !CONFIG.supabaseUrl ||\n  !CONFIG.supabaseUrl.startsWith(\"https://\") ||\n  CONFIG.supabaseUrl.includes(\"TU_PROJECT_ID\") ||\n  !CONFIG.supabaseServiceRoleKey ||\n  CONFIG.supabaseServiceRoleKey.includes(\"TU_SERVICE_ROLE_KEY\") ||\n  CONFIG.supabaseServiceRoleKey.includes(\"REEMPLAZAR\") ||\n  CONFIG.supabaseServiceRoleKey.includes(\"PEGA_AQUI\")\n) {\n  throw new Error(\n    \"Configura supabaseUrl y supabaseServiceRoleKey en el nodo 'Preparar entrada, validar nombre y parámetros'.\"\n  );\n}\n\nif (!CONFIG.recipientEmail || !CONFIG.recipientEmail.includes(\"@\")) {\n  throw new Error(\"Configura recipientEmail con un correo válido.\");\n}\n\nif (!CONFIG.baseUrl.startsWith(\"https://consultaprocesos.ramajudicial.gov.co\")) {\n  throw new Error(\"La baseUrl no corresponde al dominio esperado de Rama Judicial.\");\n}\n\nif (!CONFIG.chromiumPath) {\n  throw new Error(\"Configura chromiumPath. Para tu contenedor debe ser /usr/bin/chromium-browser.\");\n}\n\n\nconst gmailPayloadText = extractTextFromGmailPayload(input.payload);\n\nconst rawBody = String(\n  input.textPlain ||\n  input.text ||\n  input.body ||\n  input.message ||\n  gmailPayloadText ||\n  input.html ||\n  input.snippet ||\n  input.payload?.body?.data ||\n  \"\"\n);\n\nlet decodedBody = rawBody;\n\ntry {\n  \n  if (/^[A-Za-z0-9_-]+={0,2}$/.test(rawBody) && rawBody.length > 20) {\n    decodedBody = decodeBase64Url(rawBody);\n  }\n} catch (error) {\n  decodedBody = rawBody;\n}\n\nconst cleanBody = cleanHtmlAndSpaces(decodedBody);\n\n\n\nconst explicitMatch = cleanBody.match(\n  /(?:nombre\\s*(?:completo)?|persona\\s*(?:a\\s*consultar)?|consultar)\\s*[:\\-]\\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+){1,6})/i\n);\n\nconst fallbackMatch = cleanBody.match(\n  /^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+){1,6})$/i\n);\n\nconst nombreConsulta = normalizeName(explicitMatch?.[1] || fallbackMatch?.[1] || \"\");\n\nif (!nombreConsulta || nombreConsulta.split(\" \").length < 2) {\n  throw new Error(\n    `No se detectó un nombre válido en el cuerpo del correo. Texto recibido: \"${cleanBody}\"`\n  );\n}\n\n\nconst now = new Date();\nconst fechaEjecucion = now.toISOString().slice(0, 10);\nconst fechaHoraEjecucion = now.toISOString();\nconst runId = `${fechaEjecucion}_${Date.now()}`;\n\nconst safeNombre = makeSafeFileName(nombreConsulta);\n\nconst expectedDocFileName = `detalle_proceso_${safeNombre}_${fechaEjecucion}.doc`;\n\nconst supabaseFilePath = `consultas/${fechaEjecucion}/${runId}/${expectedDocFileName}`;\n\nconst emailSubject = `[RPA] Detalle Proceso - ${nombreConsulta} - ${fechaEjecucion}`;\n\nconst emailBody = `\n<p>Hola,</p>\n\n<p>Se ejecutó la consulta judicial solicitada.</p>\n\n<ul>\n  <li><strong>Nombre consultado:</strong> ${nombreConsulta}</li>\n  <li><strong>Fecha de ejecución:</strong> ${fechaEjecucion}</li>\n  <li><strong>Fecha y hora técnica:</strong> ${fechaHoraEjecucion}</li>\n  <li><strong>Fuente de consulta:</strong> ${CONFIG.baseUrl}</li>\n</ul>\n\n<p>Se adjunta el documento DOC descargado desde el detalle del proceso.</p>\n<p>También se generará una URL temporal de Supabase como respaldo documental.</p>\n`;\n\n\n\nreturn [\n  {\n    json: {\n      ...CONFIG,\n\n\n      sourceMessageId: input.id || input.messageId || \"\",\n      sourceThreadId: input.threadId || \"\",\n      sourceSubject: input.subject || \"\",\n      sourceFrom: input.from || input.fromEmail || input.sender || \"\",\n      rawBody: cleanBody,\n\n\n      nombreConsulta,\n      safeNombre,\n\n  \n      fechaEjecucion,\n      fechaHoraEjecucion,\n      runId,\n\n\n      expectedDocFileName,\n      supabaseFilePath,\n\n\n      emailSubject,\n      emailBody\n    }\n  }\n];"
+      },
+      "id": "1a6fa04d-d29c-4986-bb48-acb852f25897",
+      "name": "Preparar entrada, validar nombre y parámetros",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const stdout = String($json.stdout || \"\");\nconst stderr = String($json.stderr || \"\");\nconst exitCode = $json.exitCode ?? $json.code ?? null;\n\n// Validación mínima: el nodo Execute Command debe entregar stdout\nif (!stdout && !stderr) {\n  throw new Error(\n    `El nodo Execute Command no entregó stdout ni stderr. JSON recibido: ${JSON.stringify($json).slice(0, 2000)}`\n  );\n}\n\n// Buscar la salida marcada del RPA\nconst match = stdout.match(/__RPA_RESULT_START__\\s*([\\s\\S]*?)\\s*__RPA_RESULT_END__/);\n\nif (!match) {\n  throw new Error(\n    [\n      \"No se pudo leer la salida JSON del RPA.\",\n      `ExitCode: ${exitCode}`,\n      `STDOUT: ${stdout.slice(0, 3000)}`,\n      `STDERR: ${stderr.slice(0, 3000)}`\n    ].join(\"\\n\")\n  );\n}\n\nlet rpa;\n\ntry {\n  rpa = JSON.parse(match[1]);\n} catch (error) {\n  throw new Error(\n    [\n      \"La salida del RPA no es JSON válido.\",\n      `Error: ${error.message}`,\n      `Salida capturada: ${match[1].slice(0, 3000)}`\n    ].join(\"\\n\")\n  );\n}\n\n// Normalizar campos para evitar undefined\nconst rpaMessage = rpa.message || rpa.error || rpa.errorMessage || \"Error no especificado\";\nconst rpaLogFile = rpa.logFile || rpa.logPath || \"No generado\";\nconst rpaScreenshot = rpa.screenshotPath || \"No generado\";\n\nif (rpa.success !== true) {\n  throw new Error(\n    `[RPA FALLÓ] ${rpaMessage}. Log: ${rpaLogFile}. Screenshot: ${rpaScreenshot}`\n  );\n}\n\nconst emailBody = `\n<p>Hola,</p>\n\n<p>Se ejecutó la consulta judicial solicitada.</p>\n\n<ul>\n  <li><strong>Nombre consultado:</strong> ${rpa.nombreConsulta}</li>\n  <li><strong>Fecha de ejecución:</strong> ${rpa.fechaEjecucion}</li>\n  <li><strong>URL del proceso:</strong> ${rpa.processUrl}</li>\n  <li><strong>Resultado seleccionado:</strong> ${rpa.sixthResultText || \"Sexto resultado de la lista\"}</li>\n  <li><strong>Archivo generado:</strong> ${rpa.downloadedFileName || rpa.expectedDocFileName}</li>\n</ul>\n\n<p>Se adjunta el documento DOC descargado.</p>\n`;\n\nreturn [\n  {\n    json: {\n      ...rpa,\n      emailSubject: `[RPA] Detalle Proceso - ${rpa.nombreConsulta} - ${rpa.fechaEjecucion}`,\n      emailBody\n    }\n  }\n];"
+      },
+      "id": "31b01264-9a9e-4838-a791-ef48902a2054",
+      "name": "Validar RPA y preparar Supabase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.docFilePath }}",
+        "options": {
+          "fileName": "={{ $json.downloadedFileName }}",
+          "mimeType": "application/msword",
+          "dataPropertyName": "data"
+        }
+      },
+      "id": "d63e7caa-4dab-461a-b2df-6140ff69b5d3",
+      "name": "Leer DOC descargado",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Validar RPA y preparar Supabase').item.json.supabaseUrl + '/storage/v1/object/' + $('Validar RPA y preparar Supabase').item.json.supabaseBucket + '/' + $('Validar RPA y preparar Supabase').item.json.supabaseFilePath }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Validar RPA y preparar Supabase').item.json.supabaseServiceRoleKey }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Validar RPA y preparar Supabase').item.json.supabaseServiceRoleKey }}"
+            },
+            {
+              "name": "x-upsert",
+              "value": "true"
+            },
+            {
+              "name": "Content-Type",
+              "value": "={{ $binary.data.mimeType || 'application/msword' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "14b5010b-8a66-4587-bff2-dfc5562276ea",
+      "name": "Subir DOC a Supabase Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1392,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Validar RPA y preparar Supabase').first().json.supabaseUrl + '/storage/v1/object/sign/' + $('Validar RPA y preparar Supabase').first().json.supabaseBucket + '/' + $('Validar RPA y preparar Supabase').first().json.supabaseFilePath }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Validar RPA y preparar Supabase').first().json.supabaseServiceRoleKey }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Validar RPA y preparar Supabase').first().json.supabaseServiceRoleKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"expiresIn\": $('Validar RPA y preparar Supabase').first().json.signedUrlExpiresInSeconds } }}",
+        "options": {}
+      },
+      "id": "cdbc8680-cc9f-4828-949a-c45052a02791",
+      "name": "Crear URL temporal Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $(\"Leer DOC descargado\").first();\nconst validado = $(\"Validar RPA y preparar Supabase\").first().json;\nconst uploadResponse = $(\"Subir DOC a Supabase Storage\").first().json;\nconst signedResponse = $json;\n\nfunction escapeHtml(value) {\n  return String(value ?? \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n}\n\nlet signedUrl =\n  signedResponse.signedURL ||\n  signedResponse.signedUrl ||\n  signedResponse.url ||\n  signedResponse.data?.signedUrl ||\n  signedResponse.data?.signedURL ||\n  \"\";\n\nif (signedUrl && !signedUrl.startsWith(\"http\")) {\n  signedUrl = `${validado.supabaseUrl.replace(/\\/$/, \"\")}${signedUrl}`;\n}\n\nconst nombreConsulta = validado.nombreConsulta || \"No identificado\";\nconst fechaEjecucion = validado.fechaEjecucion || \"\";\nconst fechaHoraEjecucion = validado.fechaHoraEjecucion || \"\";\nconst processUrl = validado.processUrl || validado.baseUrl || \"\";\nconst sixthRadicado = validado.sixthRadicado || \"\";\nconst resultCount = validado.resultCount ?? \"\";\nconst downloadedFileName = validado.downloadedFileName || validado.expectedDocFileName || \"Documento generado\";\nconst sourceFrom = validado.sourceFrom || \"\";\nconst sourceSubject = validado.sourceSubject || \"\";\n\nconst emailBody = `\n<div style=\"margin:0;padding:0;background:#f4f7f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937;\">\n  <div style=\"max-width:760px;margin:0 auto;padding:28px 16px;\">\n\n    <div style=\"background:#0b3b35;border-radius:16px 16px 0 0;padding:24px 28px;color:#ffffff;\">\n      <div style=\"font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#d4af37;font-weight:700;\">\n        Automatización RPA\n      </div>\n\n      <h1 style=\"margin:8px 0 0 0;font-size:24px;line-height:1.25;font-weight:700;\">\n        Consulta judicial ejecutada correctamente\n      </h1>\n\n      <p style=\"margin:8px 0 0 0;font-size:14px;line-height:1.5;color:#d7e5e1;\">\n        Se realizó la consulta en Rama Judicial, se seleccionó el sexto resultado público y se descargó el documento oficial del proceso.\n      </p>\n    </div>\n\n    <div style=\"background:#ffffff;border:1px solid #e5e7eb;border-top:0;border-radius:0 0 16px 16px;padding:26px 28px;box-shadow:0 8px 24px rgba(15,23,42,.08);\">\n\n      <div style=\"display:inline-block;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;margin-bottom:18px;\">\n        Estado: OK\n      </div>\n\n      <h2 style=\"margin:0 0 12px 0;font-size:18px;color:#111827;\">\n        Resumen de la consulta\n      </h2>\n\n      <table style=\"width:100%;border-collapse:collapse;border:1px solid #edf0f2;border-radius:12px;overflow:hidden;font-size:14px;\">\n        <tr>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#5f6b7a;width:32%;\">\n            Nombre consultado\n          </td>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#111827;font-weight:700;\">\n            ${escapeHtml(nombreConsulta)}\n          </td>\n        </tr>\n\n        <tr>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;color:#5f6b7a;\">\n            Radicado seleccionado\n          </td>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;color:#111827;font-weight:700;\">\n            ${escapeHtml(sixthRadicado)}\n          </td>\n        </tr>\n\n        <tr>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#5f6b7a;\">\n            Fecha de ejecución\n          </td>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#111827;\">\n            ${escapeHtml(fechaEjecucion)}\n          </td>\n        </tr>\n\n        <tr>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;color:#5f6b7a;\">\n            Fecha/hora técnica\n          </td>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;color:#111827;\">\n            ${escapeHtml(fechaHoraEjecucion)}\n          </td>\n        </tr>\n\n        <tr>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#5f6b7a;\">\n            Resultados detectados\n          </td>\n          <td style=\"padding:10px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#111827;\">\n            ${escapeHtml(resultCount)}\n          </td>\n        </tr>\n\n        <tr>\n          <td style=\"padding:10px 12px;color:#5f6b7a;\">\n            Documento adjunto\n          </td>\n          <td style=\"padding:10px 12px;color:#111827;font-weight:600;\">\n            ${escapeHtml(downloadedFileName)}\n          </td>\n        </tr>\n      </table>\n\n      <div style=\"margin-top:22px;padding:16px 18px;background:#fffbea;border:1px solid #fde68a;border-radius:12px;\">\n        <div style=\"font-weight:700;color:#92400e;margin-bottom:6px;\">\n          Criterio aplicado\n        </div>\n        <div style=\"font-size:14px;line-height:1.5;color:#78350f;\">\n          La automatización consultó por nombre, identificó los resultados públicos disponibles y abrió el sexto radicado para descargar el documento oficial desde el detalle del proceso.\n        </div>\n      </div>\n\n      <h2 style=\"margin:24px 0 12px 0;font-size:18px;color:#111827;\">\n        Trazabilidad de la solicitud\n      </h2>\n\n      <table style=\"width:100%;border-collapse:collapse;border:1px solid #edf0f2;border-radius:12px;overflow:hidden;font-size:13px;\">\n        <tr>\n          <td style=\"padding:9px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#5f6b7a;width:32%;\">\n            Fuente consulta\n          </td>\n          <td style=\"padding:9px 12px;border-bottom:1px solid #edf0f2;background:#f9fafb;color:#1f2937;\">\n            <a href=\"${escapeHtml(processUrl)}\" style=\"color:#0f766e;text-decoration:none;\">\n              ${escapeHtml(processUrl)}\n            </a>\n          </td>\n        </tr>\n\n        <tr>\n          <td style=\"padding:9px 12px;border-bottom:1px solid #edf0f2;color:#5f6b7a;\">\n            Correo origen\n          </td>\n          <td style=\"padding:9px 12px;border-bottom:1px solid #edf0f2;color:#1f2937;\">\n            ${escapeHtml(sourceFrom)}\n          </td>\n        </tr>\n\n        <tr>\n          <td style=\"padding:9px 12px;background:#f9fafb;color:#5f6b7a;\">\n            Asunto origen\n          </td>\n          <td style=\"padding:9px 12px;background:#f9fafb;color:#1f2937;\">\n            ${escapeHtml(sourceSubject)}\n          </td>\n        </tr>\n      </table>\n\n      <p style=\"margin:22px 0 0 0;font-size:14px;line-height:1.6;color:#374151;\">\n        Se adjunta el documento oficial descargado desde el detalle del proceso.\n      </p>\n\n      <div style=\"margin-top:24px;border-top:1px solid #e5e7eb;padding-top:14px;font-size:12px;line-height:1.5;color:#6b7280;\">\n        Mensaje generado automáticamente por el flujo RPA de consulta judicial. No requiere respuesta si la información adjunta es correcta.\n      </div>\n    </div>\n  </div>\n</div>\n`;\n\nconst emailText = [\n  \"Buen día,\",\n  \"\",\n  \"Se ejecutó correctamente la automatización de consulta judicial.\",\n  \"\",\n  `Nombre consultado: ${nombreConsulta}`,\n  `Radicado seleccionado: ${sixthRadicado}`,\n  `Fecha de ejecución: ${fechaEjecucion}`,\n  `Fecha/hora técnica: ${fechaHoraEjecucion}`,\n  `Resultados detectados: ${resultCount}`,\n  `Documento adjunto: ${downloadedFileName}`,\n  `URL del proceso: ${processUrl}`,\n  \"\",\n  \"Se adjunta el documento oficial descargado desde el detalle del proceso.\",\n  \"\",\n  \"Mensaje automático.\"\n].join(\"\\n\");\n\nreturn [\n  {\n    json: {\n      ...base.json,\n      ...validado,\n      uploadResponse,\n      signedResponse,\n      supabaseSignedUrl: signedUrl,\n      emailText,\n      emailBody,\n      emailSubject: validado.emailSubject || `[RPA] Detalle Proceso - ${nombreConsulta} - ${fechaEjecucion}`\n    },\n    binary: base.binary\n  }\n];"
+      },
+      "id": "c1d8d1fc-7598-4ada-af53-2fe6f1ac4302",
+      "name": "Preparar correo final con adjunto y URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "jhrey@tcc.com.co, juliancardozo2109@gmail.com",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2064,
+        704
+      ],
+      "id": "0c419865-8e90-4488-ace4-4b2cb72f6a4a",
+      "name": "Send a message",
+      "webhookId": "0b3eb67d-4cef-4fd5-a5a3-844b5e7c1e8d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9waStz5ryqi0QVm7",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "={{\n`\ncd /usr/local/lib/node_modules/n8n && node <<'NODE'\nconst fs = require(\"fs\");\nconst path = require(\"path\");\nconst { chromium } = require(\"playwright\");\n\nconst input = ${JSON.stringify($json)};\nconst logFile = path.join(input.logDir, \"ejecuciones_rpa_consulta_judicial.jsonl\");\n\nfunction ensureDir(dir) {\n  fs.mkdirSync(dir, { recursive: true });\n}\n\nfunction writeLog(event) {\n  ensureDir(input.logDir);\n  fs.appendFileSync(\n    logFile,\n    JSON.stringify({\n      timestamp: new Date().toISOString(),\n      runId: input.runId,\n      nombreConsulta: input.nombreConsulta,\n      ...event\n    }) + String.fromCharCode(10),\n    \"utf8\"\n  );\n}\n\nfunction emit(result) {\n  console.log(\"__RPA_RESULT_START__\");\n  console.log(JSON.stringify(result));\n  console.log(\"__RPA_RESULT_END__\");\n}\n\nfunction stripDiacritics(value) {\n  const text = String(value || \"\").normalize(\"NFD\");\n  let output = \"\";\n\n  for (const char of text) {\n    const code = char.charCodeAt(0);\n    if (code < 768 || code > 879) {\n      output += char;\n    }\n  }\n\n  return output;\n}\n\nfunction cleanText(value) {\n  const text = stripDiacritics(value);\n  let output = \"\";\n  let previousWasSpace = false;\n\n  for (const char of text) {\n    const code = char.charCodeAt(0);\n    const isSpace = code <= 32 || code === 160;\n\n    if (isSpace) {\n      if (!previousWasSpace) {\n        output += \" \";\n        previousWasSpace = true;\n      }\n    } else {\n      output += char;\n      previousWasSpace = false;\n    }\n  }\n\n  return output.trim();\n}\n\nfunction normalizeText(value) {\n  return cleanText(value).toLowerCase();\n}\n\nfunction digitsOnly(value) {\n  const text = String(value || \"\");\n  let output = \"\";\n\n  for (const char of text) {\n    if (char >= \"0\" && char <= \"9\") {\n      output += char;\n    }\n  }\n\n  return output;\n}\n\nasync function getBodyText(page) {\n  return await page\n    .evaluate(() => document.body.innerText || document.body.textContent || \"\")\n    .catch(() => \"\");\n}\n\nasync function isDetailPage(page, expectedRadicado) {\n  const text = await getBodyText(page);\n  const digits = digitsOnly(text);\n\n  const hasDetail =\n    text.includes(\"DETALLE DEL PROCESO\") ||\n    text.includes(\"REPORTE DEL PROCESO\") ||\n    text.includes(\"Datos del Proceso\") ||\n    text.includes(\"DATOS DEL PROCESO\") ||\n    text.includes(\"Fecha de consulta\") ||\n    text.includes(\"Fecha de la consulta\") ||\n    text.includes(\"Actuaciones del Proceso\") ||\n    text.includes(\"Sujetos Procesales\");\n\n  const hasRadicado = expectedRadicado ? digits.includes(expectedRadicado) : digits.length > 15;\n\n  return hasDetail && hasRadicado;\n}\n\nasync function tryAction(label, actions) {\n  let lastError = null;\n\n  for (const action of actions) {\n    try {\n      return await action();\n    } catch (error) {\n      lastError = error;\n    }\n  }\n\n  throw new Error(\n    label + \": \" + (lastError && lastError.message ? lastError.message : \"No se pudo ejecutar la acción\")\n  );\n}\n\nasync function selectNaturalPerson(page) {\n  await tryAction(\"Seleccionar Tipo de Persona Natural\", [\n    async () => {\n      const field = page\n        .locator(\"mat-form-field, .mat-mdc-form-field, .mat-form-field, div\")\n        .filter({ hasText: /Tipo de Persona/i })\n        .first();\n\n      await field.click({ timeout: 10000, force: true });\n      await page.waitForTimeout(800);\n\n      await page\n        .locator(\"mat-option, .mat-mdc-option, [role='option'], div, span\")\n        .filter({ hasText: /^Natural$/i })\n        .first()\n        .click({ timeout: 10000, force: true });\n    },\n\n    async () => {\n      await page.getByText(/Tipo de Persona/i).first().click({\n        timeout: 10000,\n        force: true\n      });\n\n      await page.waitForTimeout(800);\n\n      await page.getByText(/^Natural$/i).first().click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      const opened = await page.evaluate(() => {\n        const cleanLocal = (value) => {\n          const text = String(value || \"\").normalize(\"NFD\");\n          let noAccents = \"\";\n\n          for (const char of text) {\n            const code = char.charCodeAt(0);\n            if (code < 768 || code > 879) {\n              noAccents += char;\n            }\n          }\n\n          let output = \"\";\n          let previousWasSpace = false;\n\n          for (const char of noAccents) {\n            const code = char.charCodeAt(0);\n            const isSpace = code <= 32 || code === 160;\n\n            if (isSpace) {\n              if (!previousWasSpace) {\n                output += \" \";\n                previousWasSpace = true;\n              }\n            } else {\n              output += char;\n              previousWasSpace = false;\n            }\n          }\n\n          return output.trim().toLowerCase();\n        };\n\n        const fields = Array.from(\n          document.querySelectorAll(\"mat-form-field, .mat-mdc-form-field, .mat-form-field, div\")\n        );\n\n        const field = fields.find((el) => cleanLocal(el.textContent).includes(\"tipo de persona\"));\n\n        if (!field) return false;\n\n        const clickable =\n          field.querySelector(\"mat-select\") ||\n          field.querySelector(\".mat-mdc-select\") ||\n          field.querySelector(\".mat-select\") ||\n          field.querySelector(\"[role='combobox']\") ||\n          field;\n\n        clickable.scrollIntoView({\n          block: \"center\",\n          inline: \"center\"\n        });\n\n        clickable.click();\n\n        return true;\n      });\n\n      if (!opened) {\n        throw new Error(\"No se pudo abrir el dropdown Tipo de Persona.\");\n      }\n\n      await page.waitForTimeout(800);\n\n      const selected = await page.evaluate(() => {\n        const cleanLocal = (value) => {\n          const text = String(value || \"\").normalize(\"NFD\");\n          let noAccents = \"\";\n\n          for (const char of text) {\n            const code = char.charCodeAt(0);\n            if (code < 768 || code > 879) {\n              noAccents += char;\n            }\n          }\n\n          let output = \"\";\n          let previousWasSpace = false;\n\n          for (const char of noAccents) {\n            const code = char.charCodeAt(0);\n            const isSpace = code <= 32 || code === 160;\n\n            if (isSpace) {\n              if (!previousWasSpace) {\n                output += \" \";\n                previousWasSpace = true;\n              }\n            } else {\n              output += char;\n              previousWasSpace = false;\n            }\n          }\n\n          return output.trim().toLowerCase();\n        };\n\n        const options = Array.from(\n          document.querySelectorAll(\"mat-option, .mat-mdc-option, [role='option'], .mat-option, div, span\")\n        );\n\n        const natural = options.find((el) => cleanLocal(el.textContent) === \"natural\");\n\n        if (!natural) return false;\n\n        natural.scrollIntoView({\n          block: \"center\",\n          inline: \"center\"\n        });\n\n        natural.click();\n        natural.dispatchEvent(new MouseEvent(\"click\", { bubbles: true }));\n\n        return true;\n      });\n\n      if (!selected) {\n        throw new Error(\"No se encontró la opción Natural después de abrir el dropdown.\");\n      }\n    }\n  ]);\n\n  await page.waitForTimeout(800);\n}\n\nasync function fillPersonName(page, nombreConsulta) {\n  await tryAction(\"Ingresar nombre consultado\", [\n    async () => {\n      const nameField = page\n        .locator(\"mat-form-field, .mat-mdc-form-field, .mat-form-field, div\")\n        .filter({ hasText: /Nombre|Apellido|Razón Social|Razon Social/i })\n        .first();\n\n      const visibleInput = nameField.locator(\"input:not([type='hidden']), textarea\").first();\n\n      await visibleInput.fill(nombreConsulta, { timeout: 10000 });\n    },\n\n    async () => {\n      const inputByAttr = page\n        .locator(\n          \"input[placeholder*='Nombre'], input[placeholder*='Apellido'], input[placeholder*='Razón'], input[placeholder*='Razon'], input[aria-label*='Nombre'], input[aria-label*='Apellido'], input[aria-label*='Razón'], input[aria-label*='Razon']\"\n        )\n        .first();\n\n      await inputByAttr.fill(nombreConsulta, { timeout: 10000 });\n    },\n\n    async () => {\n      const filled = await page.evaluate((nombre) => {\n        const isVisible = (el) => {\n          const style = window.getComputedStyle(el);\n          const rect = el.getBoundingClientRect();\n\n          return (\n            style.display !== \"none\" &&\n            style.visibility !== \"hidden\" &&\n            style.opacity !== \"0\" &&\n            rect.width > 0 &&\n            rect.height > 0\n          );\n        };\n\n        const setNativeValue = (el, value) => {\n          const prototype = Object.getPrototypeOf(el);\n          const descriptor = Object.getOwnPropertyDescriptor(prototype, \"value\");\n\n          if (descriptor && descriptor.set) {\n            descriptor.set.call(el, value);\n          } else {\n            el.value = value;\n          }\n\n          el.dispatchEvent(new Event(\"input\", { bubbles: true }));\n          el.dispatchEvent(new Event(\"change\", { bubbles: true }));\n          el.dispatchEvent(new Event(\"blur\", { bubbles: true }));\n        };\n\n        const inputs = Array.from(document.querySelectorAll(\"input:not([type='hidden']), textarea\")).filter(\n          (el) => !el.disabled && !el.readOnly && isVisible(el)\n        );\n\n        for (const el of inputs) {\n          const attrText = String(\n            [\n              el.name,\n              el.id,\n              el.placeholder,\n              el.getAttribute(\"aria-label\"),\n              el.getAttribute(\"formcontrolname\"),\n              el.getAttribute(\"ng-reflect-name\"),\n              el.getAttribute(\"autocomplete\")\n            ].join(\" \")\n          ).toLowerCase();\n\n          if (\n            attrText.includes(\"nombre\") ||\n            attrText.includes(\"apellido\") ||\n            attrText.includes(\"razon\") ||\n            attrText.includes(\"social\")\n          ) {\n            el.focus();\n            setNativeValue(el, nombre);\n            return true;\n          }\n        }\n\n        for (const el of inputs) {\n          const container = el.closest(\"mat-form-field, .mat-mdc-form-field, .mat-form-field, div, section, form\");\n          const containerText = String(container ? container.textContent : \"\").toLowerCase();\n\n          if (\n            containerText.includes(\"nombre\") ||\n            containerText.includes(\"apellido\") ||\n            containerText.includes(\"razon social\") ||\n            containerText.includes(\"razon\")\n          ) {\n            el.focus();\n            setNativeValue(el, nombre);\n            return true;\n          }\n        }\n\n        return false;\n      }, nombreConsulta);\n\n      if (!filled) {\n        throw new Error(\"No se encontró input visible y editable para ingresar el nombre.\");\n      }\n    }\n  ]);\n\n  await page.waitForTimeout(800);\n}\n\nasync function getSearchFormState(page, expectedName) {\n  return await page.evaluate((nombreEsperado) => {\n    const clean = (value) => {\n      const text = String(value || \"\");\n      let output = \"\";\n      let previousWasSpace = false;\n\n      for (const char of text) {\n        const code = char.charCodeAt(0);\n        const isSpace = code <= 32 || code === 160;\n\n        if (isSpace) {\n          if (!previousWasSpace) {\n            output += \" \";\n            previousWasSpace = true;\n          }\n        } else {\n          output += char;\n          previousWasSpace = false;\n        }\n      }\n\n      return output.trim();\n    };\n\n    const strip = (value) => {\n      const text = String(value || \"\").normalize(\"NFD\");\n      let output = \"\";\n\n      for (const char of text) {\n        const code = char.charCodeAt(0);\n        if (code < 768 || code > 879) {\n          output += char;\n        }\n      }\n\n      return output;\n    };\n\n    const normalize = (value) => clean(strip(value)).toLowerCase();\n\n    const isVisible = (el) => {\n      const style = window.getComputedStyle(el);\n      const rect = el.getBoundingClientRect();\n\n      return (\n        style.display !== \"none\" &&\n        style.visibility !== \"hidden\" &&\n        style.opacity !== \"0\" &&\n        rect.width > 0 &&\n        rect.height > 0\n      );\n    };\n\n    const expected = normalize(nombreEsperado);\n\n    const inputs = Array.from(document.querySelectorAll(\"input:not([type='hidden']), textarea\"))\n      .filter((el) => isVisible(el));\n\n    const inputValues = inputs.map((el) => ({\n      value: clean(el.value),\n      placeholder: clean(el.placeholder),\n      name: clean(el.name),\n      id: clean(el.id),\n      ariaLabel: clean(el.getAttribute(\"aria-label\")),\n      formcontrolname: clean(el.getAttribute(\"formcontrolname\")),\n      containerText: clean(el.closest(\"mat-form-field, .mat-mdc-form-field, .mat-form-field, div\")?.textContent || \"\")\n    }));\n\n    const nameInput = inputValues.find((item) => {\n      const metadata = normalize([\n        item.placeholder,\n        item.name,\n        item.id,\n        item.ariaLabel,\n        item.formcontrolname,\n        item.containerText\n      ].join(\" \"));\n\n      return (\n        metadata.includes(\"nombre\") ||\n        metadata.includes(\"apellido\") ||\n        metadata.includes(\"razon\") ||\n        metadata.includes(\"social\")\n      );\n    });\n\n    const visibleBodyText = clean(document.body.innerText || document.body.textContent || \"\");\n    const nameValue = nameInput ? nameInput.value : \"\";\n    const normalizedValue = normalize(nameValue);\n\n    const nameOk =\n      normalizedValue.length > 0 &&\n      (\n        normalizedValue.includes(expected) ||\n        expected.includes(normalizedValue)\n      );\n\n    return {\n      nameOk,\n      nameValue,\n      expectedName: nombreEsperado,\n      inputValues,\n      bodySample: visibleBodyText.slice(0, 1800)\n    };\n  }, expectedName);\n}\n\nasync function ensureNameWasFilled(page, nombreConsulta) {\n  let state = await getSearchFormState(page, nombreConsulta);\n\n  if (state.nameOk) {\n    writeLog({\n      level: \"INFO\",\n      step: \"FORM_NAME_VALIDATED\",\n      nameValue: state.nameValue\n    });\n\n    return;\n  }\n\n  writeLog({\n    level: \"WARN\",\n    step: \"FORM_NAME_NOT_FILLED_RETRY\",\n    expectedName: nombreConsulta,\n    state\n  });\n\n  await fillPersonName(page, nombreConsulta);\n  await page.waitForTimeout(1000);\n\n  state = await getSearchFormState(page, nombreConsulta);\n\n  if (!state.nameOk) {\n    throw new Error(\n      \"El campo de nombre no quedó diligenciado antes de consultar. Nombre esperado: \" +\n        nombreConsulta +\n        \". Estado formulario: \" +\n        JSON.stringify(state).slice(0, 2500)\n    );\n  }\n\n  writeLog({\n    level: \"INFO\",\n    step: \"FORM_NAME_VALIDATED_AFTER_RETRY\",\n    nameValue: state.nameValue\n  });\n}\n\nasync function hasResultsLoaded(page) {\n  return await page.evaluate(() => {\n    const text = document.body.innerText || document.body.textContent || \"\";\n    const parts = String(text || \"\").split(/[ \\\\t\\\\r\\\\n]+/);\n\n    const digitGroups = [];\n\n    for (const part of parts) {\n      let digits = \"\";\n\n      for (const char of part) {\n        if (char >= \"0\" && char <= \"9\") {\n          digits += char;\n        }\n      }\n\n      if (digits.length >= 15 && digits.length <= 30) {\n        digitGroups.push(digits);\n      }\n    }\n\n    const hasResultHeaders =\n      text.includes(\"Número de Radicación\") ||\n      text.includes(\"Numero de Radicacion\") ||\n      text.includes(\"Sujetos Procesales\") ||\n      text.includes(\"Despacho y Departamento\");\n\n    const hasDownloadButton =\n      text.includes(\"Descargar DOC\") ||\n      text.includes(\"Descargar CSV\");\n\n    const noResults =\n      text.includes(\"No se encontraron\") ||\n      text.includes(\"Sin resultados\") ||\n      text.includes(\"No existen registros\");\n\n    return {\n      loaded: hasResultHeaders && digitGroups.length > 0,\n      noResults,\n      hasResultHeaders,\n      hasDownloadButton,\n      radicadoCount: digitGroups.length,\n      radicados: digitGroups.slice(0, 15),\n      bodySample: text.slice(0, 2500)\n    };\n  });\n}\n\nasync function clickConsultarButton(page) {\n  await tryAction(\"Clic en CONSULTAR\", [\n    async () => {\n      await page.getByRole(\"button\", { name: /consultar/i }).click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      await page.locator(\"button\", { hasText: /consultar/i }).first().click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      await page.getByText(/^CONSULTAR$/i).first().click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      const clicked = await page.evaluate(() => {\n        const clean = (value) =>\n          String(value || \"\")\n            .split(String.fromCharCode(9)).join(\" \")\n            .split(String.fromCharCode(10)).join(\" \")\n            .split(String.fromCharCode(13)).join(\" \")\n            .replace(/ +/g, \" \")\n            .trim()\n            .toLowerCase();\n\n        const isVisible = (el) => {\n          const style = window.getComputedStyle(el);\n          const rect = el.getBoundingClientRect();\n\n          return (\n            style.display !== \"none\" &&\n            style.visibility !== \"hidden\" &&\n            style.opacity !== \"0\" &&\n            rect.width > 0 &&\n            rect.height > 0\n          );\n        };\n\n        const elements = Array.from(document.querySelectorAll(\"button, a, span, div\"))\n          .filter(isVisible);\n\n        const target = elements.find((el) => clean(el.innerText || el.textContent || \"\") === \"consultar\");\n\n        if (!target) return false;\n\n        target.scrollIntoView({\n          block: \"center\",\n          inline: \"center\"\n        });\n\n        target.dispatchEvent(new MouseEvent(\"mousedown\", { bubbles: true }));\n        target.dispatchEvent(new MouseEvent(\"mouseup\", { bubbles: true }));\n        target.dispatchEvent(new MouseEvent(\"click\", { bubbles: true }));\n        target.click();\n\n        return true;\n      });\n\n      if (!clicked) {\n        throw new Error(\"No se encontró botón CONSULTAR visible.\");\n      }\n    }\n  ]);\n}\n\nasync function submitSearchAndWaitForResults(page, nombreConsulta) {\n  await ensureNameWasFilled(page, nombreConsulta);\n\n  let lastState = null;\n\n  for (let attempt = 1; attempt <= 3; attempt++) {\n    writeLog({\n      level: \"INFO\",\n      step: \"SEARCH_SUBMIT_ATTEMPT\",\n      attempt\n    });\n\n    await clickConsultarButton(page);\n\n    await page.waitForLoadState(\"networkidle\", {\n      timeout: input.timeoutMs || 45000\n    }).catch(() => {});\n\n    for (let i = 0; i < 45; i++) {\n      await page.waitForTimeout(1000);\n\n      lastState = await hasResultsLoaded(page);\n\n      if (lastState.loaded) {\n        writeLog({\n          level: \"INFO\",\n          step: \"SEARCH_RESULTS_LOADED\",\n          attempt,\n          radicadoCount: lastState.radicadoCount,\n          radicados: lastState.radicados\n        });\n\n        return lastState;\n      }\n\n      if (lastState.noResults) {\n        throw new Error(\n          \"La página indicó que no existen resultados para el nombre consultado: \" +\n            nombreConsulta +\n            \". Estado: \" +\n            JSON.stringify(lastState).slice(0, 2500)\n        );\n      }\n    }\n\n    writeLog({\n      level: \"WARN\",\n      step: \"SEARCH_RESULTS_NOT_LOADED_RETRY\",\n      attempt,\n      state: lastState\n    });\n\n    await ensureNameWasFilled(page, nombreConsulta);\n  }\n\n  throw new Error(\n    \"La consulta no cargó resultados después de presionar CONSULTAR. \" +\n      \"Último estado: \" +\n      JSON.stringify(lastState).slice(0, 3000)\n  );\n}\n\nasync function detectAndOpenSixthResult(page, context) {\n  const resultDetection = await page.evaluate(() => {\n    const cleanTextLocal = (value) => {\n      const text = String(value || \"\").normalize(\"NFD\");\n      let noAccents = \"\";\n\n      for (const char of text) {\n        const code = char.charCodeAt(0);\n        if (code < 768 || code > 879) {\n          noAccents += char;\n        }\n      }\n\n      let output = \"\";\n      let previousWasSpace = false;\n\n      for (const char of noAccents) {\n        const code = char.charCodeAt(0);\n        const isSpace = code <= 32 || code === 160;\n\n        if (isSpace) {\n          if (!previousWasSpace) {\n            output += \" \";\n            previousWasSpace = true;\n          }\n        } else {\n          output += char;\n          previousWasSpace = false;\n        }\n      }\n\n      return output.trim();\n    };\n\n    const digitsOnlyLocal = (value) => {\n      const text = String(value || \"\");\n      let output = \"\";\n\n      for (const char of text) {\n        if (char >= \"0\" && char <= \"9\") {\n          output += char;\n        }\n      }\n\n      return output;\n    };\n\n    const isVisible = (el) => {\n      const style = window.getComputedStyle(el);\n      const rect = el.getBoundingClientRect();\n\n      return (\n        style.display !== \"none\" &&\n        style.visibility !== \"hidden\" &&\n        style.opacity !== \"0\" &&\n        rect.width > 0 &&\n        rect.height > 0\n      );\n    };\n\n    const clickableScore = (el) => {\n      const style = window.getComputedStyle(el);\n      const color = style.color || \"\";\n      const cursor = style.cursor || \"\";\n      const rgb = color.match(/[0-9]+/g) || [];\n      const r = Number(rgb[0] || 0);\n      const g = Number(rgb[1] || 0);\n      const b = Number(rgb[2] || 0);\n\n      let score = 0;\n\n      if (b > r && b >= g) score += 4;\n      if (cursor === \"pointer\") score += 4;\n      if (el.tagName.toLowerCase() === \"a\") score += 5;\n      if (el.tagName.toLowerCase() === \"button\") score += 4;\n      if (el.getAttribute(\"role\") === \"button\") score += 4;\n      if (typeof el.onclick === \"function\") score += 3;\n\n      return score;\n    };\n\n    const bestClickableForRadicado = (row, radicadoDigits) => {\n      const elements = Array.from(\n        row.querySelectorAll(\"a, button, span, div, td, mat-cell, .mat-cell, .mat-mdc-cell, [role='button']\")\n      )\n        .filter(isVisible)\n        .map((el) => {\n          const text = cleanTextLocal(el.innerText || el.textContent || \"\");\n          const digits = digitsOnlyLocal(text);\n\n          return {\n            element: el,\n            text,\n            digits,\n            score: clickableScore(el),\n            length: text.length\n          };\n        })\n        .filter((item) => {\n          if (!item.digits) return false;\n          return item.digits === radicadoDigits || item.digits.includes(radicadoDigits) || radicadoDigits.includes(item.digits);\n        });\n\n      elements.sort((a, b) => {\n        if (b.score !== a.score) return b.score - a.score;\n        return a.length - b.length;\n      });\n\n      if (elements.length > 0) return elements[0].element;\n\n      return row;\n    };\n\n    document.querySelectorAll(\"[data-rpa-sixth-result]\").forEach((el) => {\n      el.removeAttribute(\"data-rpa-sixth-result\");\n    });\n\n    const bodyText = cleanTextLocal(document.body.innerText || document.body.textContent || \"\");\n\n    if (/no se encontraron|sin resultados|no existen registros|no se encontro informacion/i.test(bodyText)) {\n      return {\n        success: false,\n        count: 0,\n        message: \"La página indica que no hay resultados.\",\n        bodySample: bodyText.slice(0, 2500)\n      };\n    }\n\n    const rows = Array.from(document.querySelectorAll(\"tr, mat-row, .mat-row, .mat-mdc-row, [role='row']\")).filter(\n      isVisible\n    );\n\n    const publicRows = [];\n\n    for (const row of rows) {\n      const rowText = cleanTextLocal(row.innerText || row.textContent || \"\");\n      const rowLower = rowText.toLowerCase();\n\n      if (!rowText || rowText.length < 20) continue;\n      if (rowLower.includes(\"numero de radicacion\")) continue;\n      if (rowLower.includes(\"número de radicación\")) continue;\n      if (rowLower.includes(\"sujetos procesales\")) continue;\n      if (rowLower.includes(\"proceso privado\")) continue;\n\n      const cells = Array.from(row.querySelectorAll(\"td, mat-cell, .mat-cell, .mat-mdc-cell, div, span, a, button\")).filter(\n        isVisible\n      );\n\n      let radicadoDigits = \"\";\n      let radicadoText = \"\";\n\n      for (const cell of cells) {\n        const text = cleanTextLocal(cell.innerText || cell.textContent || \"\");\n        const digits = digitsOnlyLocal(text);\n\n        if (digits.length >= 15 && digits.length <= 30 && text.length <= 80) {\n          radicadoDigits = digits;\n          radicadoText = text;\n          break;\n        }\n      }\n\n      if (!radicadoDigits) {\n        const parts = rowText.split(\" \");\n\n        for (const part of parts) {\n          const digits = digitsOnlyLocal(part);\n\n          if (digits.length >= 15 && digits.length <= 30) {\n            radicadoDigits = digits;\n            radicadoText = part;\n            break;\n          }\n        }\n      }\n\n      if (!radicadoDigits) continue;\n\n      const clickable = bestClickableForRadicado(row, radicadoDigits);\n\n      publicRows.push({\n        element: clickable,\n        radicado: radicadoDigits,\n        text: radicadoText || radicadoDigits,\n        rowText: rowText.slice(0, 800)\n      });\n    }\n\n    if (publicRows.length < 6) {\n      return {\n        success: false,\n        count: publicRows.length,\n        message: \"No se detectaron 6 filas públicas con radicado.\",\n        samples: publicRows.map((item, index) => ({\n          index: index + 1,\n          radicado: item.radicado,\n          text: item.text,\n          rowText: item.rowText\n        })),\n        bodySample: bodyText.slice(0, 3500)\n      };\n    }\n\n    const target = publicRows[5];\n\n    target.element.scrollIntoView({\n      block: \"center\",\n      inline: \"center\"\n    });\n\n    target.element.setAttribute(\"data-rpa-sixth-result\", \"true\");\n\n    return {\n      success: true,\n      count: publicRows.length,\n      sixthText: target.text,\n      sixthRadicado: target.radicado,\n      samples: publicRows.slice(0, 12).map((item, index) => ({\n        index: index + 1,\n        radicado: item.radicado,\n        text: item.text,\n        rowText: item.rowText\n      }))\n    };\n  });\n\n  writeLog({\n    level: resultDetection.success ? \"INFO\" : \"ERROR\",\n    step: \"RESULT_DETECTION_PUBLIC_ROWS\",\n    resultDetection\n  });\n\n  if (!resultDetection.success) {\n    throw new Error(\n      resultDetection.message +\n        \" Filas públicas detectadas: \" +\n        resultDetection.count +\n        \". Muestras: \" +\n        JSON.stringify(resultDetection.samples || []).slice(0, 3500) +\n        \". Texto pantalla: \" +\n        String(resultDetection.bodySample || \"\").slice(0, 3500)\n    );\n  }\n\n  const popupPromise = context.waitForEvent(\"page\", { timeout: 7000 }).catch(() => null);\n\n  await page.locator(\"[data-rpa-sixth-result='true']\").click({\n    timeout: 15000,\n    force: true\n  });\n\n  let popup = await popupPromise;\n\n  if (popup) {\n    page = popup;\n    page.setDefaultTimeout(input.timeoutMs || 45000);\n\n    await page.waitForLoadState(\"domcontentloaded\", {\n      timeout: input.timeoutMs || 45000\n    }).catch(() => {});\n  }\n\n  await page.waitForLoadState(\"networkidle\", {\n    timeout: input.timeoutMs || 45000\n  }).catch(() => {});\n\n  await page.waitForTimeout(4000);\n\n  if (!(await isDetailPage(page, resultDetection.sixthRadicado))) {\n    const popupPromise2 = context.waitForEvent(\"page\", { timeout: 7000 }).catch(() => null);\n\n    await page.locator(\"[data-rpa-sixth-result='true']\").dblclick({\n      timeout: 15000,\n      force: true\n    }).catch(async () => {\n      await page.locator(\"[data-rpa-sixth-result='true']\").click({\n        timeout: 15000,\n        force: true\n      });\n    });\n\n    popup = await popupPromise2;\n\n    if (popup) {\n      page = popup;\n      page.setDefaultTimeout(input.timeoutMs || 45000);\n\n      await page.waitForLoadState(\"domcontentloaded\", {\n        timeout: input.timeoutMs || 45000\n      }).catch(() => {});\n    }\n\n    await page.waitForLoadState(\"networkidle\", {\n      timeout: input.timeoutMs || 45000\n    }).catch(() => {});\n\n    await page.waitForTimeout(4000);\n  }\n\n  if (!(await isDetailPage(page, resultDetection.sixthRadicado))) {\n    const text = await getBodyText(page);\n\n    throw new Error(\n      \"Después de hacer clic en el sexto radicado público no se abrió el detalle del proceso. Radicado objetivo: \" +\n        resultDetection.sixthRadicado +\n        \". Texto pantalla: \" +\n        text.slice(0, 2500)\n    );\n  }\n\n  return {\n    page,\n    count: resultDetection.count,\n    sixthText: resultDetection.sixthText || \"Sexto radicado público\",\n    sixthRadicado: resultDetection.sixthRadicado,\n    samples: resultDetection.samples\n  };\n}\n\nfunction getPreferredDocxName() {\n  let fileName = String(input.expectedDocFileName || \"detalle_proceso.docx\");\n\n  if (fileName.toLowerCase().endsWith(\".doc\")) {\n    fileName = fileName.slice(0, -4) + \".docx\";\n  }\n\n  if (!fileName.toLowerCase().endsWith(\".docx\")) {\n    fileName = fileName + \".docx\";\n  }\n\n  return fileName;\n}\n\nfunction getPreferredSupabasePath(fileName) {\n  let filePath = String(input.supabaseFilePath || \"\");\n\n  if (!filePath) {\n    return fileName;\n  }\n\n  if (filePath.toLowerCase().endsWith(\".doc\")) {\n    filePath = filePath.slice(0, -4) + \".docx\";\n  }\n\n  if (!filePath.toLowerCase().endsWith(\".docx\")) {\n    filePath = filePath + \".docx\";\n  }\n\n  return filePath;\n}\n\nasync function findDetailPage(context, fallbackPage, expectedRadicado) {\n  const openPages = context.pages().filter((p) => !p.isClosed());\n\n  for (let i = openPages.length - 1; i >= 0; i--) {\n    const candidatePage = openPages[i];\n\n    if (await isDetailPage(candidatePage, expectedRadicado)) {\n      return candidatePage;\n    }\n  }\n\n  if (await isDetailPage(fallbackPage, expectedRadicado)) {\n    return fallbackPage;\n  }\n\n  const currentText = await getBodyText(fallbackPage);\n\n  throw new Error(\n    \"No se encontró página de detalle válida para descargar DOCX. Radicado esperado: \" +\n      expectedRadicado +\n      \". Texto pantalla: \" +\n      currentText.slice(0, 2500)\n  );\n}\n\nasync function clickDownloadDoc(page) {\n  await tryAction(\"Clic en Descargar DOC del detalle\", [\n    async () => {\n      await page.getByRole(\"button\", { name: /Descargar DOC/i }).click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      await page.locator(\"button\", { hasText: /Descargar DOC/i }).last().click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      await page.locator(\"a\", { hasText: /Descargar DOC/i }).last().click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      await page.getByText(/Descargar DOC/i).last().click({\n        timeout: 10000,\n        force: true\n      });\n    },\n\n    async () => {\n      const clicked = await page.evaluate(() => {\n        const cleanLocal = (value) => {\n          const text = String(value || \"\");\n          let output = \"\";\n          let previousWasSpace = false;\n\n          for (const char of text) {\n            const code = char.charCodeAt(0);\n            const isSpace = code <= 32 || code === 160;\n\n            if (isSpace) {\n              if (!previousWasSpace) {\n                output += \" \";\n                previousWasSpace = true;\n              }\n            } else {\n              output += char;\n              previousWasSpace = false;\n            }\n          }\n\n          return output.trim().toLowerCase();\n        };\n\n        const isVisible = (el) => {\n          const style = window.getComputedStyle(el);\n          const rect = el.getBoundingClientRect();\n\n          return (\n            style.display !== \"none\" &&\n            style.visibility !== \"hidden\" &&\n            style.opacity !== \"0\" &&\n            rect.width > 0 &&\n            rect.height > 0\n          );\n        };\n\n        const elements = Array.from(document.querySelectorAll(\"button, a, span, div\"))\n          .filter(isVisible)\n          .filter((el) => cleanLocal(el.innerText || el.textContent || \"\").includes(\"descargar doc\"));\n\n        const target = elements[elements.length - 1];\n\n        if (!target) return false;\n\n        target.scrollIntoView({\n          block: \"center\",\n          inline: \"center\"\n        });\n\n        target.dispatchEvent(new MouseEvent(\"mousedown\", { bubbles: true }));\n        target.dispatchEvent(new MouseEvent(\"mouseup\", { bubbles: true }));\n        target.dispatchEvent(new MouseEvent(\"click\", { bubbles: true }));\n        target.click();\n\n        return true;\n      });\n\n      if (!clicked) {\n        throw new Error(\"No se encontró control Descargar DOC.\");\n      }\n    }\n  ]);\n}\n\nasync function downloadOfficialDocx(page, context, expectedRadicado, docFilePath) {\n  page = await findDetailPage(context, page, expectedRadicado);\n\n  page.setDefaultTimeout(input.timeoutMs || 45000);\n  await page.bringToFront().catch(() => {});\n  await page.waitForTimeout(2000);\n\n  const detailText = await getBodyText(page);\n\n  if (!digitsOnly(detailText).includes(expectedRadicado)) {\n    throw new Error(\"La página de detalle no contiene el radicado esperado antes de descargar: \" + expectedRadicado);\n  }\n\n  writeLog({\n    level: \"INFO\",\n    step: \"DETAIL_READY_FOR_OFFICIAL_DOWNLOAD\",\n    radicado: expectedRadicado,\n    sample: detailText.slice(0, 2000)\n  });\n\n  const downloadPromise = page.waitForEvent(\"download\", {\n    timeout: input.timeoutMs || 45000\n  });\n\n  await clickDownloadDoc(page);\n\n  const download = await downloadPromise;\n\n  await download.saveAs(docFilePath);\n\n  return {\n    page,\n    suggestedFileName: download.suggestedFilename(),\n    generatedFallback: false\n  };\n}\n\nfunction validateDownloadedFile(docFilePath, expectedRadicado) {\n  if (!fs.existsSync(docFilePath)) {\n    throw new Error(\"El archivo DOCX no fue guardado correctamente: \" + docFilePath);\n  }\n\n  const stat = fs.statSync(docFilePath);\n\n  if (!stat.size || stat.size < 500) {\n    throw new Error(\"El archivo DOCX está vacío o incompleto. Tamaño: \" + stat.size + \" bytes.\");\n  }\n\n  const buffer = fs.readFileSync(docFilePath);\n  const header = buffer.subarray(0, 2).toString(\"utf8\");\n  const probe = buffer.subarray(0, Math.min(buffer.length, 50000)).toString(\"latin1\");\n\n  const isDocx =\n    header === \"PK\" &&\n    (\n      probe.includes(\"word/document.xml\") ||\n      probe.includes(\"[Content_Types].xml\")\n    );\n\n  if (!isDocx) {\n    const textProbe = cleanText(buffer.toString(\"utf8\").slice(0, 8000));\n\n    if (\n      textProbe.includes(\"CONSULTA DE PROCESOS\") &&\n      textProbe.includes(\"NACIONAL UNIFICADA\") &&\n      !textProbe.includes(\"REPORTE DEL PROCESO\")\n    ) {\n      throw new Error(\"El archivo descargado sigue siendo el listado general, no el reporte del proceso.\");\n    }\n\n    if (!digitsOnly(textProbe).includes(expectedRadicado)) {\n      throw new Error(\n        \"El archivo descargado no contiene el radicado esperado. Radicado: \" +\n          expectedRadicado +\n          \". Muestra: \" +\n          textProbe.slice(0, 2000)\n      );\n    }\n  }\n\n  return {\n    sizeBytes: stat.size,\n    isDocx\n  };\n}\n\n(async () => {\n  let browser;\n  let context;\n  let page;\n  let screenshotPath = \"No generado\";\n\n  try {\n    ensureDir(input.outputDir);\n    ensureDir(input.logDir);\n    ensureDir(input.screenshotDir);\n\n    writeLog({\n      level: \"INFO\",\n      step: \"START\",\n      message: \"Inicio de consulta judicial\"\n    });\n\n    browser = await chromium.launch({\n      headless: input.headless !== false,\n      executablePath: input.chromiumPath || \"/usr/bin/chromium-browser\",\n      args: [\n        \"--no-sandbox\",\n        \"--disable-setuid-sandbox\",\n        \"--disable-dev-shm-usage\",\n        \"--disable-gpu\",\n        \"--disable-extensions\"\n      ]\n    });\n\n    context = await browser.newContext({\n      acceptDownloads: true,\n      viewport: {\n        width: 1366,\n        height: 768\n      }\n    });\n\n    page = await context.newPage();\n    page.setDefaultTimeout(input.timeoutMs || 45000);\n\n    await page.goto(input.baseUrl, {\n      waitUntil: \"domcontentloaded\",\n      timeout: input.timeoutMs || 45000\n    });\n\n    await page.waitForLoadState(\"networkidle\", {\n      timeout: input.timeoutMs || 45000\n    }).catch(() => {});\n\n    writeLog({\n      level: \"INFO\",\n      step: \"OPEN_PAGE\",\n      url: page.url()\n    });\n\n    await page.screenshot({\n      path: path.join(input.screenshotDir, \"01_pagina_inicial_\" + input.runId + \".png\"),\n      fullPage: true\n    }).catch(() => {});\n\n    await tryAction(\"Seleccionar Todos los Procesos\", [\n      async () => page.getByLabel(/Todos los Procesos/i).check({ timeout: 8000 }),\n      async () => page.getByText(/Todos los Procesos/i).first().click({ timeout: 8000 }),\n      async () => page.locator(\"label\", { hasText: /Todos los Procesos/i }).first().click({ timeout: 8000 })\n    ]);\n\n    writeLog({\n      level: \"INFO\",\n      step: \"SELECT_ALL_PROCESSES\"\n    });\n\n    await selectNaturalPerson(page);\n\n    writeLog({\n      level: \"INFO\",\n      step: \"SELECT_NATURAL_PERSON\",\n      message: \"Tipo de persona Natural seleccionado.\"\n    });\n\n    await fillPersonName(page, input.nombreConsulta);\n\n    await ensureNameWasFilled(page, input.nombreConsulta);\n\n    writeLog({\n      level: \"INFO\",\n      step: \"FILL_NAME\",\n      nombreConsulta: input.nombreConsulta\n    });\n\n    await page.screenshot({\n      path: path.join(input.screenshotDir, \"02_formulario_diligenciado_\" + input.runId + \".png\"),\n      fullPage: true\n    }).catch(() => {});\n\n    await submitSearchAndWaitForResults(page, input.nombreConsulta);\n\n    writeLog({\n      level: \"INFO\",\n      step: \"CLICK_SEARCH_AND_RESULTS_READY\"\n    });\n\n    await page.screenshot({\n      path: path.join(input.screenshotDir, \"03_resultados_\" + input.runId + \".png\"),\n      fullPage: true\n    }).catch(() => {});\n\n    const opened = await detectAndOpenSixthResult(page, context);\n    page = opened.page;\n\n    const processUrl = page.url();\n\n    writeLog({\n      level: \"INFO\",\n      step: \"PROCESS_DETAIL_OPENED\",\n      processUrl,\n      sixthRadicado: opened.sixthRadicado,\n      sixthText: opened.sixthText\n    });\n\n    await page.screenshot({\n      path: path.join(input.screenshotDir, \"04_detalle_proceso_\" + input.runId + \".png\"),\n      fullPage: true\n    }).catch(() => {});\n\n    const actualDocFileName = getPreferredDocxName();\n    const actualSupabaseFilePath = getPreferredSupabasePath(actualDocFileName);\n    const docFilePath = path.join(input.outputDir, actualDocFileName);\n\n    const downloaded = await downloadOfficialDocx(\n      page,\n      context,\n      opened.sixthRadicado,\n      docFilePath\n    );\n\n    page = downloaded.page;\n\n    const validation = validateDownloadedFile(docFilePath, opened.sixthRadicado);\n\n    writeLog({\n      level: \"INFO\",\n      step: \"DOCX_DOWNLOADED\",\n      docFilePath,\n      sizeBytes: validation.sizeBytes,\n      isDocx: validation.isDocx,\n      suggestedFileName: downloaded.suggestedFileName\n    });\n\n    screenshotPath = path.join(input.screenshotDir, \"success_\" + input.runId + \".png\");\n\n    await page.screenshot({\n      path: screenshotPath,\n      fullPage: true\n    }).catch(() => {});\n\n    await browser.close();\n\n    emit({\n      ...input,\n      success: true,\n      status: \"OK\",\n      message: \"Consulta judicial ejecutada correctamente\",\n      processUrl,\n      expectedDocFileName: actualDocFileName,\n      supabaseFilePath: actualSupabaseFilePath,\n      docFilePath,\n      downloadedFileName: actualDocFileName,\n      screenshotPath,\n      logFile,\n      resultCount: opened.count,\n      sixthResultText: opened.sixthText,\n      sixthRadicado: opened.sixthRadicado,\n      detectedResults: opened.samples,\n      generatedFallback: false,\n      downloadedOfficialDocx: true,\n      suggestedFileName: downloaded.suggestedFileName || \"\"\n    });\n\n  } catch (error) {\n    try {\n      if (page && !page.isClosed()) {\n        ensureDir(input.screenshotDir);\n        screenshotPath = path.join(input.screenshotDir, \"error_\" + input.runId + \".png\");\n\n        await page.screenshot({\n          path: screenshotPath,\n          fullPage: true\n        }).catch(() => {});\n      }\n\n      writeLog({\n        level: \"ERROR\",\n        step: \"FAILED\",\n        message: error.message,\n        screenshotPath\n      });\n\n      if (browser) {\n        await browser.close().catch(() => {});\n      }\n    } catch (_) {}\n\n    emit({\n      ...input,\n      success: false,\n      status: \"ERROR\",\n      message: error.message,\n      screenshotPath,\n      logFile\n    });\n  }\n})();\nNODE\n`\n}}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        720,
+        704
+      ],
+      "id": "1376c923-ac16-4585-ac81-e2e222f5b903",
+      "name": "Ejecutar RPA Playwright - Shell"
+    },
+    {
+      "parameters": {
+        "jsCode": "const validado = $(\"Validar RPA y preparar Supabase\").first().json;\nconst correo = $(\"Preparar correo final con adjunto y URL\").first().json;\n\nconst payload = {\n  run_id: validado.runId,\n  fecha_ejecucion: validado.fechaEjecucion,\n  fecha_hora_ejecucion: validado.fechaHoraEjecucion || new Date().toISOString(),\n\n  nombre_consultado: validado.nombreConsulta,\n  estado: \"OK\",\n  mensaje: \"Consulta judicial ejecutada correctamente y correo enviado.\",\n\n  radicado_seleccionado: validado.sixthRadicado,\n  result_count: Number(validado.resultCount || 0),\n\n  source_message_id: validado.sourceMessageId || \"\",\n  source_thread_id: validado.sourceThreadId || \"\",\n  source_from: validado.sourceFrom || \"\",\n  source_subject: validado.sourceSubject || \"\",\n\n  process_url: validado.processUrl || \"\",\n  doc_file_name: validado.downloadedFileName || validado.expectedDocFileName || \"\",\n  storage_path: validado.supabaseFilePath || \"\",\n  signed_url: correo.supabaseSignedUrl || \"\",\n\n  screenshot_path: validado.screenshotPath || \"\",\n  log_file: validado.logFile || \"\"\n};\n\nreturn [\n  {\n    json: {\n      ...validado,\n      logPayload: payload\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        704
+      ],
+      "id": "64711651-53fe-43f2-90d0-03c1f2fa2f02",
+      "name": "Preparar log Supabase"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Validar RPA y preparar Supabase').first().json.supabaseUrl.replace(/\\/$/, '') + '/rest/v1/rpa_consulta_judicial_log?on_conflict=run_id' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Validar RPA y preparar Supabase').first().json.supabaseServiceRoleKey }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Validar RPA y preparar Supabase').first().json.supabaseServiceRoleKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.logPayload) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2480,
+        704
+      ],
+      "id": "dfd9b0cb-ef7c-46cf-b399-f102e5fd2e95",
+      "name": "Insertar log Supabase"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger - Producción (configurar y activar)": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Obtener correo completo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Obtener correo completo": {
+      "main": [
+        [
+          {
+            "node": "Preparar entrada, validar nombre y parámetros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar prueba manual": {
+      "main": [
+        [
+          {
+            "node": "Simular correo Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simular correo Gmail": {
+      "main": [
+        [
+          {
+            "node": "Preparar entrada, validar nombre y parámetros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar entrada, validar nombre y parámetros": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar RPA Playwright - Shell",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar RPA y preparar Supabase": {
+      "main": [
+        [
+          {
+            "node": "Leer DOC descargado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer DOC descargado": {
+      "main": [
+        [
+          {
+            "node": "Subir DOC a Supabase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subir DOC a Supabase Storage": {
+      "main": [
+        [
+          {
+            "node": "Crear URL temporal Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear URL temporal Supabase": {
+      "main": [
+        [
+          {
+            "node": "Preparar correo final con adjunto y URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar correo final con adjunto y URL": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar RPA Playwright - Shell": {
+      "main": [
+        [
+          {
+            "node": "Validar RPA y preparar Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Preparar log Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar log Supabase": {
+      "main": [
+        [
+          {
+            "node": "Insertar log Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1a0bc4dd-9d3c-490d-9b81-8a3df622d9ae",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b399505f8bf6ce1568fea10d739ee58584499a8a5c8df850719715840cf658a4"
+  },
+  "id": "DN7eNftv5j1HQo5L",
+  "tags": []
+}
